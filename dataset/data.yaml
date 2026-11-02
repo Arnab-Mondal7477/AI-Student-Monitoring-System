@@ -1,0 +1,7 @@
+path: /Users/arnab/AI-Student-Monitoring/dataset
+
+train: images/train
+val: images/val
+
+names:
+  0: watch

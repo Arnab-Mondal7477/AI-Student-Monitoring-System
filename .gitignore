@@ -1,0 +1,17 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+datasets/
+evidence/
+runs/
+.DS_Store
+*.pt
+*.onnx

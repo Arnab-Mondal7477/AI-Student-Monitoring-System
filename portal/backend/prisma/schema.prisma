@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  password_hash String
+  role          String
+  created_at    DateTime @default(now())
+  admin         Admin?
+  student       Student?
+  teacher       Teacher?
+}
+
+model Admin {
+  id      Int    @id @default(autoincrement())
+  user_id Int    @unique
+  name    String
+  email   String @unique
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Student {
+  id              Int             @id @default(autoincrement())
+  user_id         Int             @unique
+  student_id      String          @unique
+  name            String
+  email           String          @unique
+  phone_number    String?
+  semester        Int             @default(1)
+  course          String          @default("B.Tech CSE")
+  cgpa            Float           @default(0.0)
+  profile_photo   String?
+  face_registered Boolean         @default(false)
+  section_id      Int?
+  profile_data    String?
+  attendances     Attendance[]
+  section         Section?        @relation(fields: [section_id], references: [id])
+  user            User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  reports         StudentReport[]
+  violations      Violation[]
+}
+
+model Teacher {
+  id            Int              @id @default(autoincrement())
+  user_id       Int              @unique
+  teacher_id    String           @unique
+  name          String
+  email         String           @unique
+  phone_number  String?
+  department    String           @default("CSE")
+  department_id Int?
+  designation   String           @default("Assistant Professor")
+  experience    Int              @default(0)
+  profile_photo String?
+  attendances   Attendance[]
+  sections      SectionTeacher[]
+  subjects      SubjectTeacher[]
+  user          User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  actions       TeacherAction[]
+  timetable     TimetableSlot[]
+  assignments   SubjectAssignment[]
+  availabilities TeacherAvailability[]
+  department_rel Department?     @relation(fields: [department_id], references: [id])
+}
+
+model Section {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  semester_id Int?
+  semester_rel Semester?       @relation(fields: [semester_id], references: [id])
+  teachers    SectionTeacher[]
+  students    Student[]
+  timetable   TimetableSlot[]
+  assignments SubjectAssignment[]
+}
+
+model SectionTeacher {
+  id         Int     @id @default(autoincrement())
+  section_id Int
+  teacher_id Int
+  teacher    Teacher @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  section    Section @relation(fields: [section_id], references: [id], onDelete: Cascade)
+
+  @@unique([section_id, teacher_id])
+}
+
+model Subject {
+  id         Int              @id @default(autoincrement())
+  code          String           @unique
+  name          String
+  department    String           @default("CSE")
+  department_id Int?
+  department_rel Department?     @relation(fields: [department_id], references: [id])
+  teachers      SubjectTeacher[]
+  timetable     TimetableSlot[]
+  assignments   SubjectAssignment[]
+}
+
+model SubjectTeacher {
+  id         Int     @id @default(autoincrement())
+  subject_id Int
+  teacher_id Int
+  teacher    Teacher @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  subject    Subject @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+
+  @@unique([subject_id, teacher_id])
+}
+
+model Classroom {
+  id          Int             @id @default(autoincrement())
+  room_number String          @unique
+  is_lab         Boolean         @default(false)
+  capacity       Int             @default(60)
+  timetable      TimetableSlot[]
+  assignments    SubjectAssignment[]
+  availabilities RoomAvailability[]
+}
+
+model TimetableSlot {
+  id           Int       @id @default(autoincrement())
+  day_of_week  String
+  start_time   String
+  end_time     String
+  type         String    @default("THEORY")
+  section_id   Int
+  subject_id   Int
+  teacher_id   Int
+  classroom_id Int
+  version_id   Int?
+  classroom    Classroom         @relation(fields: [classroom_id], references: [id], onDelete: Cascade)
+  teacher      Teacher           @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  subject      Subject           @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+  section      Section           @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  version      TimetableVersion? @relation(fields: [version_id], references: [id], onDelete: Cascade)
+}
+
+model Attendance {
+  id         Int      @id @default(autoincrement())
+  student_id Int
+  teacher_id Int
+  date       DateTime @default(now())
+  status     String
+  teacher    Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  student    Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+}
+
+model Violation {
+  id             Int             @id @default(autoincrement())
+  student_id     Int?
+  teacher_id     Int?
+  subject_id     Int?
+  section_id     Int?
+  detection_type String
+  confidence     Float
+  evidence_path  String?
+  timestamp      DateTime        @default(now())
+  status         String          @default("NEW")
+  report         StudentReport?
+  actions        TeacherAction[]
+  student        Student?        @relation(fields: [student_id], references: [id], onDelete: Cascade)
+}
+
+model TeacherAction {
+  id           Int       @id @default(autoincrement())
+  violation_id Int
+  teacher_id   Int
+  action_type  String
+  remark       String?
+  timestamp    DateTime  @default(now())
+  teacher      Teacher   @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  violation    Violation @relation(fields: [violation_id], references: [id], onDelete: Cascade)
+}
+
+model StudentReport {
+  id           Int       @id @default(autoincrement())
+  violation_id Int       @unique
+  student_id   Int
+  title        String
+  description  String
+  date         DateTime  @default(now())
+  student      Student   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  violation    Violation @relation(fields: [violation_id], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  title      String
+  message    String
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+}
+
+model AcademicYear {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique // e.g., "2026-27"
+  start_date DateTime?
+  end_date   DateTime?
+  is_active  Boolean    @default(false)
+  semesters  Semester[]
+  versions   TimetableVersion[]
+}
+
+model Department {
+  id         Int        @id @default(autoincrement())
+  code       String     @unique // e.g., "CSE"
+  name       String
+  semesters  Semester[]
+  teachers   Teacher[]
+  subjects   Subject[]
+  versions   TimetableVersion[]
+}
+
+model Semester {
+  id               Int        @id @default(autoincrement())
+  name             String     // e.g., "5th Semester"
+  level            Int        // e.g., 5
+  academic_year_id Int
+  department_id    Int
+  academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  department       Department   @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  sections         Section[]
+  versions         TimetableVersion[]
+  assignments      SubjectAssignment[]
+
+  @@unique([academic_year_id, department_id, level])
+}
+
+model SubjectAssignment {
+  id           Int       @id @default(autoincrement())
+  subject_id   Int
+  teacher_id   Int
+  section_id   Int
+  semester_id  Int
+  classes_week Int       @default(3)
+  duration_min Int       @default(60)
+  class_type   String    @default("THEORY")
+  room_id      Int?
+  
+  subject      Subject   @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+  teacher      Teacher   @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  section      Section   @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  semester     Semester  @relation(fields: [semester_id], references: [id], onDelete: Cascade)
+  room         Classroom? @relation(fields: [room_id], references: [id])
+}
+
+model TimetableVersion {
+  id               Int       @id @default(autoincrement())
+  academic_year_id Int
+  department_id    Int
+  semester_id      Int
+  version_number   Int       @default(1)
+  status           String    @default("DRAFT") // DRAFT, GENERATED, PUBLISHED
+  created_at       DateTime  @default(now())
+
+  academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  department       Department   @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  semester         Semester     @relation(fields: [semester_id], references: [id], onDelete: Cascade)
+  slots            TimetableSlot[]
+}
+
+model CollegeSettings {
+  id              Int     @id @default(autoincrement())
+  working_days    String  @default("1,2,3,4,5") // Mon-Fri
+  start_time      String  @default("09:00")
+  end_time        String  @default("17:00")
+  period_duration Int     @default(60)
+  lunch_start     String  @default("13:00")
+  lunch_end       String  @default("14:00")
+}
+
+model TeacherAvailability {
+  id           Int     @id @default(autoincrement())
+  teacher_id   Int
+  day_of_week  String
+  start_time   String
+  end_time     String
+  teacher      Teacher @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+}
+
+model RoomAvailability {
+  id           Int       @id @default(autoincrement())
+  room_id      Int
+  day_of_week  String
+  start_time   String
+  end_time     String
+  room         Classroom @relation(fields: [room_id], references: [id], onDelete: Cascade)
+}
